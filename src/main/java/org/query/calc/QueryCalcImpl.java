@@ -13,8 +13,8 @@ public class QueryCalcImpl implements QueryCalc {
         // t3 is a file contains table "t3" with columns "c" and "z". Same format.
         //
         // Number of rows of all three tables lays in range [0, 1_000_000].
-        // Still, it's guaranteed that full outer join of at least one pair of tables can fit into RAM, so is the
-        // full content of all three tables
+        // It's guaranteed that full content of all three tables fits into RAM.
+        // Also it's guaranteed that full outer join of at least one pair of tables can fit into RAM.
         //
         // TODO: Implement following query, put a reasonable effort into making it efficiently from perspective of
         //  computation time, memory usage and resource utilization (in that exact order). You are free to use any lib
