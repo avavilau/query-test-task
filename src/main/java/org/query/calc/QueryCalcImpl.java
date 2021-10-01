@@ -7,14 +7,19 @@ public class QueryCalcImpl implements QueryCalc {
     @Override
     public void select(Path t1, Path t2, Path t3, Path output) throws IOException {
         // t1 is a file contains table "t1" with two columns "a" and "x". First line is a number of rows, then each line
-        // contains exactly one row.  See test resources for examples.
+        // contains exactly one row, that contains two numbers parsable by Double.parse(): value for column a and x
+        // respectively.See test resources for examples.
         // t2 is a file contains table "t2" with columns "b" and "y". Same format.
         // t3 is a file contains table "t3" with columns "c" and "z". Same format.
+        //
         // Number of rows of all three tables lays in range [0, 1_000_000].
-        // Still it's guaranteed that full outer join of at least one pair of tables can fit into RAM.
+        // Still, it's guaranteed that full outer join of at least one pair of tables can fit into RAM, so is the
+        // full content of all three tables
         //
         // TODO: Implement following query, put a reasonable effort into making it efficiently from perspective of
-        //  computation time, memory usage and resource utilization (in that exact order).
+        //  computation time, memory usage and resource utilization (in that exact order). You are free to use any lib
+        //  from a maven central.
+        //
         // SELECT a, SUM(x * y * z) as s
         // FROM t1
         // JOIN t2

@@ -29,9 +29,7 @@ public class ResultComparator {
                 for (int i = 0; i < expectedSplit.length; ++i) {
                     double expectedParsed = Double.parseDouble(expectedSplit[i]);
                     double actualParsed = Double.parseDouble(actualSplit[i]);
-                    if (Math.abs(expectedParsed - actualParsed) > 1e-8) {
-                        System.out.println();
-                    }
+                    
                     Assert.assertEquals(
                             String.format("Test: %s. Line %d deviates from expected", testName, lineNumber),
                             expectedParsed,
