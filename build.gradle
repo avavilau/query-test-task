@@ -1,0 +1,36 @@
+plugins {
+    id "me.champeau.jmh" version "0.6.4"
+    id "io.freefair.lombok" version "6.0.0-m2"
+    id 'java'
+}
+
+apply plugin: 'java'
+apply plugin: "io.freefair.lombok"
+
+version '1.0-SNAPSHOT'
+sourceCompatibility = '11'
+
+repositories {
+    mavenCentral()
+}
+
+jmh {
+    jmhVersion = '1.31'
+}
+
+compileJava.options.encoding = 'UTF-8'
+
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+}
+
+dependencies {
+    implementation 'it.unimi.dsi:fastutil-core:8.5.4'
+    implementation 'com.google.jimfs:jimfs:1.2'
+    implementation 'commons-io:commons-io:2.11.0'
+    testImplementation 'junit:junit:4.13.2'
+}
+
+test {
+    useJUnitPlatform()
+}
