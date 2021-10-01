@@ -1,1 +1,1 @@
-The task is to implement a single method `QueryCalcImpl implements QueryCalc.select`
+The task is to implement a single method `org.query.calc.QueryCalcImpl.select`
