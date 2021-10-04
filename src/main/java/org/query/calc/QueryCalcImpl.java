@@ -33,5 +33,6 @@ public class QueryCalcImpl implements QueryCalc {
         // 
         // Note: STABLE is not a standard SQL command. It means that you should preserve the original order. 
         // In this context it means, that in case of tie on s-value you should prefer value of a, with a lower row number.
+        // In case multiple occurrences, you may assume that group has a row number of the first occurrence.
     }
 }
