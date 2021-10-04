@@ -30,5 +30,8 @@ public class QueryCalcImpl implements QueryCalc {
         // GROUP BY a
         // STABLE ORDER BY s DESC
         // Limit 10
+        // 
+        // Note: STABLE is not a standard SQL command. It means that you should preserve the original order. 
+        // In this context it means, that in case of tie on s-value you should prefer value of a, with a lower row number.
     }
 }
