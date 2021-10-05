@@ -48,25 +48,21 @@ public class QueryCalcImpl implements QueryCalc {
 
         List<double[]> l1 = readTable(t1, true), l2 = readTable(t2, false), l3 = readTable(t3, false);
 
-        List<Map.Entry<Key, Double>> resultSet = l1.stream() // from t1
-                // join t2
-                .flatMap(r1 -> l2.stream().map(r2 -> {
-                    double[] res = new double[5];
-                    System.arraycopy(r1, 0, res, 0, 3);
-                    System.arraycopy(r2, 0, res, 3, 2);
+        List<double[]> merged = l2.parallelStream()
+                .flatMap(r1 -> l3.parallelStream().map(r2 -> {
+                    double[] res = new double[2];
+                    res[0] = r1[0] + r2[0]; // b + c
+                    res[1] = r1[1] * r2[1]; // y * z
                     return res;
-                    // join t3
-                })).flatMap(r12 -> l3.stream().map(r3 -> {
-                    double[] res = new double[7];
-                    System.arraycopy(r12, 0, res, 0, 5);
-                    System.arraycopy(r3, 0, res, 5, 2);
-                    return res;
-                    // WHERE a < b + c
-                })).filter(r -> r[1] < r[3] + r[5])
-                .collect(Collectors.groupingBy(r -> new Key(r[1], r[0]), // GROUP BY a
-                        Collectors.summingDouble(r -> r[2] * r[4] * r[6]))) // SUM(x * y * z)
-                .entrySet().stream()
-                .sorted((a,b) -> {
+                })).collect(Collectors.toList());
+
+        List<Map.Entry<Key, Double>> resultSet = l1.parallelStream().peek(r1 -> r1[2] = r1[2] * merged.stream()
+                // a < b + c
+                .filter(r -> r1[1] < r[0]).map(r -> r[1]).reduce(0.0, Double::sum))
+                .collect(Collectors.groupingByConcurrent(r -> new Key(r[1], r[0]), // GROUP BY a
+                        Collectors.summingDouble(r -> r[2]))) // SUM(x * y * z)
+                .entrySet().parallelStream()
+                .sorted((a, b) -> {
                     // ORDER BY s DESC
                     int cmp = b.getValue().compareTo(a.getValue());
                     // make sorting stable
