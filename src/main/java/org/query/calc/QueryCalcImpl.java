@@ -66,7 +66,8 @@ public class QueryCalcImpl implements QueryCalc {
                 })).sorted(Comparator.comparingDouble(a -> a[0])).collect(Collectors.toList());
 
         double [] prefixSum = new double[merged.size()];
-        prefixSum[0] = merged.get(0)[1];
+        if (!merged.isEmpty())
+            prefixSum[0] = merged.get(0)[1];
         for(int i = 1; i < merged.size(); i++) {
             prefixSum[i] = prefixSum[i - 1] + merged.get(i)[1];
         }
