@@ -16,7 +16,7 @@ public class QueryCalcImpl implements QueryCalc {
         //
         // Number of rows of all three tables lays in range [0, 1_000_000].
         // It's guaranteed that full content of all three tables fits into RAM.
-        // Also it's guaranteed that full outer join of at least one pair of tables can fit into RAM.
+        // It's guaranteed that full outer join of at least one pair (t1xt2 or t2xt3 or t1xt3) of tables can fit into RAM.
         //
         // TODO: Implement following query, put a reasonable effort into making it efficiently from perspective of
         //  computation time, memory usage and resource utilization (in that exact order). You are free to use any lib
