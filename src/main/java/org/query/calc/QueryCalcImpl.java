@@ -1,7 +1,19 @@
 package org.query.calc;
 
+import lombok.SneakyThrows;
+
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.function.Consumer;
+import java.util.stream.Collectors;
+
+import static java.util.Collections.reverseOrder;
+import static java.util.Map.Entry.comparingByValue;
 
 public class QueryCalcImpl implements QueryCalc {
     @Override
@@ -34,5 +46,62 @@ public class QueryCalcImpl implements QueryCalc {
         // Note: STABLE is not a standard SQL command. It means that you should preserve the original order. 
         // In this context it means, that in case of tie on s-value you should prefer value of a, with a lower row number.
         // In case multiple occurrences, you may assume that group has a row number of the first occurrence.
+        var t2Rows = readAllRows(t2);
+        var t3Rows = readAllRows(t3);
+        var result = groupedTable(t1, t2Rows, t3Rows)
+                .entrySet()
+                .stream()
+                .sorted(reverseOrder(comparingByValue()))
+                .limit(10)
+                .collect(Collectors.toList());
+        writeResult(result, output);
+    }
+
+    private Map<Double, Double> groupedTable(Path t1, Collection<double[]> t2Rows, Collection<double[]> t3Rows) {
+        var groupedTable = new LinkedHashMap<Double, Double>();
+        forEachRow(t1, t1Row -> {
+            for (var t2Row : t2Rows) {
+                for (var t3Row : t3Rows) {
+                    if (t1Row[0] < t2Row[0] + t3Row[0]) {
+                        groupedTable.merge(t1Row[0], t1Row[1] * t2Row[1] * t3Row[1], Double::sum);
+                    } else {
+                        groupedTable.putIfAbsent(t1Row[0], 0D);
+                    }
+                }
+            }
+        });
+        return groupedTable;
+    }
+
+    private Collection<double[]> readAllRows(Path file) {
+        var rows = new ArrayList<double[]>();
+        forEachRow(file, rows::add);
+        return rows;
+    }
+
+    @SneakyThrows
+    private void forEachRow(Path file, Consumer<double[]> rowConsumer) {
+        try (var reader = Files.newBufferedReader(file)) {
+            int rowsNumber = Integer.parseInt(reader.readLine());
+            int iteration = 0;
+            while (iteration < rowsNumber) {
+                String[] values = reader.readLine().split(" ");
+                rowConsumer.accept(new double[]{Double.parseDouble(values[0]), Double.parseDouble(values[1])});
+                iteration++;
+            }
+        }
+    }
+
+    @SneakyThrows
+    private void writeResult(Collection<Map.Entry<Double, Double>> result, Path output) {
+        try (var writer = Files.newBufferedWriter(output)) {
+            writer.append(String.valueOf(result.size()));
+            for (Map.Entry<Double, Double> resultRow : result) {
+                writer.newLine();
+                writer.append(String.valueOf(resultRow.getKey()));
+                writer.append(" ");
+                writer.append(String.valueOf(resultRow.getValue()));
+            }
+        }
     }
 }
