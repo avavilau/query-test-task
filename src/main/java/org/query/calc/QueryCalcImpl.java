@@ -49,11 +49,13 @@ public class QueryCalcImpl implements QueryCalc {
         Row[] values2 = readTable(t2);
         Row[] values3 = readTable(t3);
 
-        // n1 * log(n1)
+        // Sort t1 by key to cache the aggregated (y * z) sum. This breaks stability by row number,
+        //  so we need to include the RN in the final sort condition
         Arrays.sort(values1, Comparator.comparingDouble(Row::getKey).reversed());
 
+        // Reverse order makes it easier to work with `subMap` method
         Double2DoubleRBTreeMap sumMap = new Double2DoubleRBTreeMap(Comparator.reverseOrder());
-        // n2 * n3 * log(n2 * n3)
+
         for (Row r1 : values2) {
             for (Row r2 : values3) {
                 double sum = r1.getKey() + r2.getKey();
@@ -65,20 +67,24 @@ public class QueryCalcImpl implements QueryCalc {
         Row[] answer = new Row[values1.length];
 
         int i = 0;
+        // if there are duplicated `t1.a`, the output size is less than values1.length
         int outputSize = 0;
-        double minBc = Double.MAX_VALUE;
+        double prevKey = Double.MAX_VALUE;
+        // cache (y * z) sum for An. (y * z) sum for A(n+1) can be calculated as `sum(An) + delta sum`. This ensures there is only 1 pass over (a + b) sums
         double yzSum = 0d;
         while (i < values1.length) {
             Row row = values1[i++];
             double key = row.getKey();
-            Double2DoubleSortedMap deltaJoinRecords = sumMap.subMap(minBc, key);
-//            // subMap may include key, need to remove it, if present
-
-            if (!deltaJoinRecords.isEmpty()) {
-                yzSum += deltaJoinRecords.values().doubleStream().sum() - deltaJoinRecords.getOrDefault(minBc, 0d);
-                minBc = deltaJoinRecords.lastDoubleKey();
+            // Corner case, we won't have `b + c` greater than `a` if `a` is `Double.MAX_VALUE`
+            if (key != Double.MAX_VALUE) {
+                // t2 + t3 records for which join condition return true on this iteration, but not on previous iteration
+                Double2DoubleSortedMap deltaJoinRecords = sumMap.subMap(prevKey, key);
+                yzSum += deltaJoinRecords.values().doubleStream().sum();
+                // Set upper bound for the next iteration as current key
+                prevKey = key;
             }
 
+            // Aggregate `a` values
             double aggregatedXs = row.getValue();
             while (i < values1.length && values1[i].getKey() == key) {
                 aggregatedXs += values1[i++].getValue();
@@ -87,13 +93,22 @@ public class QueryCalcImpl implements QueryCalc {
             answer[outputSize++] = new Row(key, aggregatedXs * yzSum, row.getRowNumber());
         }
 
+        // Stable sort by `s` and rowNumber
         Arrays.sort(answer, 0, outputSize,
                 Comparator.comparingDouble(Row::getValue).reversed().thenComparingInt(Row::getRowNumber));
         if (outputSize > LIMIT) {
             answer = Arrays.copyOfRange(answer, 0, LIMIT);
             outputSize = LIMIT;
         }
+
         writeResult(output, answer, outputSize);
+
+        // Running time analysis. `O(n) = n2 * n3 * log(n2 * n3)` determined by cross product of  t2, t3:
+        //   1. n1 * log(n1) - t1 sort by `a`
+        //   2. n2 * n3 * log(n2 * n3) - cross product t2, t3 and TreeMap population
+        //   3. n2 * n3 - rolling `y * z` sum
+        //   4. n1 * log(n2 * n3) - join condition `a < b + c` using subMap and `x * y * z` sum
+        //   5. n1 * log(n1) - final sort by `s` and row number
     }
 
     private Row[] readTable(Path p) throws IOException {
