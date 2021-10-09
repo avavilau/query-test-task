@@ -54,4 +54,10 @@ public class QueryCalcTest {
     public void testCase3() throws IOException, URISyntaxException {
         doTest("case-3", new QueryCalcImpl(), "case-3");
     }
+
+    @Test
+    public void testCase4() throws IOException, URISyntaxException {
+        doTest("case-4", new QueryCalcImpl(), "case-4");
+    }
+
 }
