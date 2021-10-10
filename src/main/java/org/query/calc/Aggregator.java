@@ -8,15 +8,15 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.LinkedList;
-import java.util.stream.Stream;
+import java.util.Map;
 
 public class Aggregator {
     private final Double2DoubleSortedMap joinedData;
-    private final Stream<Record> newData;
+    private final Map<Double, Double> newData;
     private final LinkedList<Record> resultList;
     private final int limit;
 
-    public Aggregator(Stream<Record> newData, Double2DoubleSortedMap joinedData, int limit) {
+    public Aggregator(Map<Double, Double> newData, Double2DoubleSortedMap joinedData, int limit) {
         this.joinedData = joinedData;
         this.newData = newData;
         this.limit = limit;
@@ -24,29 +24,28 @@ public class Aggregator {
     }
 
     public void calcAndSaveResult(Path output)  throws IOException {
-        newData.forEach(record -> {
+        newData.entrySet().forEach(record -> {
             boolean notFound = true;
-            for (Double d : joinedData.keySet()) {
-                if (record.getCol1() < d) {
-                    addRecord(record, joinedData.get(d.doubleValue()));
+            for (Double d : joinedData.tailMap(record.getKey().doubleValue()).keySet()) {
+                if (record.getKey() < d) {
+                    addRecord(record.getKey(), record.getValue() * joinedData.get(d.doubleValue()));
                     notFound = false;
                     break;
                 }
             }
             if (notFound) {
-                addRecord(record, 0.0);
+                addRecord(record.getKey(), 0.0);
             }
         });
         writeResult(output);
     }
 
-    private void addRecord(Record record, double total) {
-        double result = total * record.getCol2();
+    private void addRecord(double label, double result) {
 
         int i;
         for (i = 0; i < resultList.size() && resultList.get(i).getCol2() >= result; i++) ;
         if (i < resultList.size() || i < limit) {
-            resultList.add(i, new Record(record.getCol1(), result));
+            resultList.add(i, new Record(label, result));
             if (resultList.size() > limit) {
                 resultList.removeLast();
             }

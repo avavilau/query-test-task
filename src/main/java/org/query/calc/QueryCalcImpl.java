@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.LinkedHashMap;
 
 public class QueryCalcImpl implements QueryCalc {
     @Override
@@ -44,9 +45,9 @@ public class QueryCalcImpl implements QueryCalc {
         // In case multiple occurrences, you may assume that group has a row number of the first occurrence.
 
         // ************************************************************************************************
-        // the worst computation time: t3 + t2*t3*log2(t2*t3)  +    t2*t3 +          t1*log2(t2*t3)*10
-        //                         read t3 / RB tree for t2*t3 / calc total for b+c/ search 10 result rows
-        // max memory usage: t3 + t2*t3 (at the stage of building RB tree)
+        // the worst computation time: t1         + t3    + t2*t3*log2(t2*t3)  +    t2*t3 +         t1*log2(t2*t3)*10
+        //                         preparsing t1/ read t3 / RB tree for t2*t3 / calc total for b+c/ search 10 result rows
+        // max memory usage: t1 + t3 + t2*t3 (at the stage of building RB tree)
 
         // Prepare file readers
         try(BufferedReader br1 = new BufferedReader(new InputStreamReader(Files.newInputStream(t1)));
@@ -57,10 +58,17 @@ public class QueryCalcImpl implements QueryCalc {
             InputFile t2RawData = new InputFile(Integer.parseInt(br2.readLine()), br2.lines());
             InputFile t3RawData = new InputFile(Integer.parseInt(br3.readLine()), br3.lines());
 
-            // Add parallelism if needed (don't use parallelism for t1 because the order is important)
+            // Add parallelism if needed
             int magicNumber = 1000;
             t2RawData.setParallelProcessing(t2RawData.getSize() > magicNumber);
             t3RawData.setParallelProcessing(t3RawData.getSize() > magicNumber);
+
+            // Prepare t1. Merge x for the same a.
+            // (shouldn't use parallel stream to keep order)
+            LinkedHashMap<Double, Double> t1Prepared = t1RawData.getContent()
+                    .map(this::parseFileLine)
+                    .collect(LinkedHashMap::new, (m, r) -> m.merge(r.getCol1(), r.getCol2(), (d1, d2) -> d1+d2),
+                            LinkedHashMap::putAll);
 
             // Join t2 and t3 to RB or AVL tree map where keys are b+c and values y*z
             Double2DoubleSortedMap joinedData;
@@ -88,8 +96,7 @@ public class QueryCalcImpl implements QueryCalc {
             Double2DoubleSortedMap preparedJoinedData = setSumFromBiggestToSmallest(joinedData);
 
             // Stream t1 records and collect 10 best records in STABLE DESC order
-            var resultCalculator = new Aggregator(t1RawData.getContent().map(this::parseFileLine),
-                    preparedJoinedData, 10);
+            var resultCalculator = new Aggregator(t1Prepared, preparedJoinedData, 10);
             resultCalculator.calcAndSaveResult(output);
         }
     }
