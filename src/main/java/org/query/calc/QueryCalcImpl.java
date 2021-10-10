@@ -1,7 +1,10 @@
 package org.query.calc;
 
+import it.unimi.dsi.fastutil.doubles.AbstractDouble2DoubleSortedMap;
+
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.Comparator;
 
 public class QueryCalcImpl implements QueryCalc {
     @Override
@@ -34,5 +37,13 @@ public class QueryCalcImpl implements QueryCalc {
         // Note: STABLE is not a standard SQL command. It means that you should preserve the original order. 
         // In this context it means, that in case of tie on s-value you should prefer value of a, with a lower row number.
         // In case multiple occurrences, you may assume that group has a row number of the first occurrence.
+
+        // ************************************************************************************************
+        // the worst computation time: t3 + t2*t3*log2(t2*t3)  +    t2*t3 +          t1*log2(t2*t3)*10
+        //                         read t3 / RB tree for t2*t3 / calc total for b+c/ search 10 result rows
+        // max memory usage: t3 + t2*t3 (at the stage of building RB tree)
+        var table3 = (new FileReader(t3)).readFile();
+        var joinedData = (new DataJoiner(table3)).readFileAndJoinData(t2);
+        (new Aggregator(10, joinedData)).calcResult(t1, output);
     }
 }
