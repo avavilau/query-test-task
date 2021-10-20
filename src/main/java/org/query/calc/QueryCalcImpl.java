@@ -18,7 +18,7 @@ public class QueryCalcImpl implements QueryCalc {
         // It's guaranteed that full content of all three tables fits into RAM.
         // It's guaranteed that full outer join of at least one pair (t1xt2 or t2xt3 or t1xt3) of tables can fit into RAM.
         //
-        // TODO: Implement following query, put a reasonable effort into making it efficiently from perspective of
+        // TODO: Implement following query, put a reasonable effort into making it efficientl from perspective of
         //  computation time, memory usage and resource utilization (in that exact order). You are free to use any lib
         //  from a maven central.
         //
