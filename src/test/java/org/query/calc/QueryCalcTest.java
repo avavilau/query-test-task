@@ -27,7 +27,7 @@ public class QueryCalcTest {
 
             queryCalc.select(t1, t2, t3, actualResult);
 
-            assertFilesEqual(testName, expectedResult, actualResult);
+            assertFilesEqual(() -> testName, expectedResult, actualResult);
 
         } finally {
             actualResultFile.delete();
