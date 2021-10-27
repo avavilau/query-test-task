@@ -2,6 +2,9 @@ package org.query.calc;
 
 import it.unimi.dsi.fastutil.doubles.Double2IntOpenHashMap;
 import it.unimi.dsi.fastutil.doubles.DoubleArrays;
+import it.unimi.dsi.fastutil.doubles.DoubleComparator;
+import it.unimi.dsi.fastutil.doubles.DoubleComparators;
+import it.unimi.dsi.fastutil.ints.IntArrays;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -10,6 +13,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.function.DoubleBinaryOperator;
+import java.util.stream.IntStream;
 
 public class QueryCalcImpl implements QueryCalc {
     private static final int LIMIT = 10;
@@ -42,36 +46,11 @@ public class QueryCalcImpl implements QueryCalc {
         // Note: STABLE is not a standard SQL command. It means that you should preserve the original order. 
         // In this context it means, that in case of tie on s-value you should prefer value of a, with a lower row number.
         // In case multiple occurrences, you may assume that group has a row number of the first occurrence.
-        DoublePairTable t2table = readTable(t2);
-        t2table = compactTable(t2table, QueryCalcImpl::sortingCompact);
+        DoublePairTable t1table = compactTable(readTable(t1), QueryCalcImpl::stableCompact);
+        DoublePairTable t2table = compactTable(readTable(t2), QueryCalcImpl::sortingCompact);
+        DoublePairTable t3table = compactTable(readTable(t3), QueryCalcImpl::sortingCompact);
 
-        DoublePairTable t3table = readTable(t3);
-        t3table = compactTable(t3table, QueryCalcImpl::sortingCompact);
-
-        // SELECT * FROM t2 JOIN t3 => (b + c, y * z)
-        DoublePairTable t2t3crossJoin = t2table.size > t3table.size // Loop through bigger table inside
-                ? t2t3crossJoin(t3table, t2table)                   // to make use of any possible caching
-                : t2t3crossJoin(t2table, t3table);
-        t2t3crossJoin = compactTable(t2t3crossJoin, QueryCalcImpl::sortingCompact);
-
-        // Prefix sums
-        for (int i = t2t3crossJoin.size - 2; i >= 0; --i) {
-            t2t3crossJoin.values[i] += t2t3crossJoin.values[i + 1];
-        }
-
-        DoublePairTable t1table = readTable(t1);
-        t1table = compactTable(t1table, QueryCalcImpl::stableCompact);
-
-        for (int i = 0; i < t1table.size; ++i) {
-            int index = Math.abs(Arrays.binarySearch(t2t3crossJoin.keys, 0, t2t3crossJoin.size, t1table.keys[i]) + 1);
-            if (index == t2t3crossJoin.size) {
-                // Left join with missing entries
-                t1table.values[i] = 0;
-            } else {
-                // x * precalculated sum(y * z)
-                t1table.values[i] *= t2t3crossJoin.values[index];
-            }
-        }
+        join(t1table, t2table, t3table);
 
         // ORDER BY s DESC on a compacted table
         DoublePairTable topN = topN(t1table, LIMIT);
@@ -103,8 +82,42 @@ public class QueryCalcImpl implements QueryCalc {
         }
     }
 
+    private static void join(DoublePairTable t1, DoublePairTable t2, DoublePairTable t3) {
+        int[] t1indices = IntStream.range(0, t1.size).toArray();
+        DoubleArrays.parallelQuickSortIndirect(t1indices, t1.keys, 0, t1.size);
+        IntArrays.reverse(t1indices);
+
+        double[] t1sortedKeys = Arrays.stream(t1indices).mapToDouble(i -> t1.keys[i]).toArray();
+        double[] yzProducts = new double[t1sortedKeys.length];
+
+        for (int leftIndex = 0; leftIndex < t2.size; ++leftIndex) {
+            for (int i = 0; i < t3.size; ++i) {
+                // b + c
+                double sum = t2.keys[leftIndex] + t3.keys[i];
+                int index = Math.abs(DoubleArrays.binarySearch(t1sortedKeys, sum, DoubleComparators.OPPOSITE_COMPARATOR) + 1);
+                if (index < t1sortedKeys.length) {
+                    // y * z
+                    yzProducts[index] += t2.values[leftIndex] * t3.values[i];
+                }
+            }
+        }
+
+        // Prefix sums
+        for (int i = 1; i < yzProducts.length; ++i) {
+            yzProducts[i] += yzProducts[i - 1];
+        }
+
+        // x * (precalculated y * z)
+        for (int i = 0; i < t1.size; ++i) {
+            t1.values[t1indices[i]] *= yzProducts[i];
+        }
+    }
+
     private static DoublePairTable topN(DoublePairTable table, int windowSize) {
-        var maxQueue = new SlidingWindowPriorityQueue(windowSize, (a, b) -> Double.compare(table.values[a], table.values[b]));
+        var maxQueue = new SlidingWindowPriorityQueue(windowSize, (a, b) -> {
+            int compare = Double.compare(table.values[a], table.values[b]);
+            return compare == 0 ? Integer.compare(b, a) : compare;
+        });
         for (int i = 0; i < table.size; ++i) {
             maxQueue.enqueue(i);
         }
@@ -119,23 +132,6 @@ public class QueryCalcImpl implements QueryCalc {
         }
 
         return new DoublePairTable(resultSize, keys, values);
-    }
-
-    private static DoublePairTable t2t3crossJoin(DoublePairTable left, DoublePairTable right) {
-        int size = Math.multiplyExact(left.size, right.size);
-        var keys = new double[size];
-        var values = new double[size];
-
-        int newPosition = 0;
-        for (int leftIndex = 0; leftIndex < left.size; ++leftIndex) {
-            for (int i = 0; i < right.size; ++i) {
-                keys[newPosition] = left.keys[leftIndex] + right.keys[i];
-                values[newPosition] = left.values[leftIndex] * right.values[i];
-                ++newPosition;
-            }
-        }
-
-        return new DoublePairTable(size, keys, values);
     }
 
     /***
