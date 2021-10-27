@@ -54,10 +54,9 @@ public class QueryCalcImpl implements QueryCalc {
                 : t2t3crossJoin(t2table, t3table);
         t2t3crossJoin = compactTable(t2t3crossJoin, QueryCalcImpl::sortingCompact);
 
-        double prefixSum = 0;
-        for (int i = t2t3crossJoin.size - 1; i >= 0; --i) {
-            t2t3crossJoin.values[i] =
-                    prefixSum += t2t3crossJoin.values[i];
+        // Prefix sums
+        for (int i = t2t3crossJoin.size - 2; i >= 0; --i) {
+            t2t3crossJoin.values[i] += t2t3crossJoin.values[i + 1];
         }
 
         DoublePairTable t1table = readTable(t1);
