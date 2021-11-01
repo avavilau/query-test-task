@@ -1,50 +1,34 @@
-package org.query.calc;
+
 
 import it.unimi.dsi.fastutil.io.BinIO;
 import org.query.executor.DataAggregator;
 import org.query.executor.DataJoiner;
 import org.query.executor.FileParser;
+
 import org.query.model.FileContent;
 
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.nio.file.Paths;
+import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
-public class QueryCalcImpl implements QueryCalc {
 
-    /**
-     * SELECT a, SUM(X * y * z) AS s FROM t1 LEFT JOIN (SELECT * FROM t2 JOIN t3) AS t ON a < b + c
-     * GROUP BY a STABLE ORDER BY s DESC LIMIT 10;
-     *
-     * In order to achieve this result, solution will be done step by step,
-     * Step 1: Input Parser: Parallelly read the all the files t1 , t2 and t3
-     * Step 2: Data Joiner: Parallelly perform Data joiner operation to perform T1 LEFT JOIN (SELECT * FROM t2 JOIN t3)
-     * Step 3: Data Aggregator: Parallelly perform Data aggregation to perform SUM(X * y * z)
-     * Step 4: Data Sorter/Limiter : Sort and limit data based on Group by and Order by criteria
-     * Step 5: Output Writer: Generate the output, convert into bytes and write into file.
-     *
-     * Design consideration:
-     * 1. Computation time: Multi-Threading is used in almost all crucial phases of the solution
-     * 2. Memory usage: Complete solution is designed with minimum and optimized extra space. Even for join operation,
-     *                  new data structure is not created.
-     * 3. Resource utilization : Resetting the  null reference for the resources which completed processing
-     *
-     * @param  t1 Path of Table t1 which has a and x as columns
-     * @param  t2 Path of Table t2 which has b and y as columns
-     * @param  t3 Path of Table t3 which has c and z as columns
-     * @param  output Path of Result table which has a, SUM(x*y*z)
-     * @return     void
-     */
-    @Override
-    public void select(Path t1, Path t2, Path t3, Path output) throws IOException {
+/**
+ * IGNORE THIS FILE, THIS IS LOCAL TESTING
+ */
+public class LocalTester {
 
+    public static void main(String args[]){
+
+        Date timenow = new Date();
+        Path t1 = Paths.get("/Users/amprabak/Downloads/case-3/t1");
+        Path t2 = Paths.get("/Users/amprabak/Downloads/case-3/t2");
+        Path t3 = Paths.get("/Users/amprabak/Downloads/case-3/t3");
+        Path output = Paths.get("/Users/amprabak/Downloads/case-3/expected");
         List<FileParser> processorList = new ArrayList<>();
 
         processorList.add(new FileParser(t2));
@@ -94,6 +78,7 @@ public class QueryCalcImpl implements QueryCalc {
             expectedOutput.append(contents.size());
             expectedOutput.append("\n");
             for(FileContent f : contents){
+                System.out.println(f.getData().left() + " "+f.getData().right());
                 expectedOutput.append(String.format("%.6f", Math.round(f.getData().left() * 1000000.0) / 1000000.0));
                 expectedOutput.append(" ");
                 expectedOutput.append(String.format("%.6f", Math.round(f.getData().right() * 1000000.0) / 1000000.0));
@@ -111,5 +96,9 @@ public class QueryCalcImpl implements QueryCalc {
             e.printStackTrace();
         }
 
+        System.out.print(new Date().getTime()- timenow.getTime());
+
     }
+
+
 }
