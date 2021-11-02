@@ -24,7 +24,7 @@ public class ResultComparator {
                 String[] expectedSplit = line1.split(" ");
                 String[] actualSplit = line2.split(" ");
 
-                if (lineNumber !=  expectedSplit.length) {
+                if (actualSplit.length !=  expectedSplit.length) {
                     Assert.fail(String.format("Test: %s. Line %d expected to contain %d numbers",
                             testNameSupplier.get(), lineNumber, expectedSplit.length));
                 }
