@@ -18,24 +18,25 @@ public class ResultComparator {
             while ((line1 = expectedSReader.readLine()) != null) {
                 line2 = actualReader.readLine();
 
-                Assert.assertNotNull(String.format("Test: %s. Result expected to have line %s", testNameSupplier.get(), lineNumber), line2);
+                if (line2 == null) {
+                    Assert.fail(String.format("Test: %s. Result expected to have line %s", testNameSupplier.get(), lineNumber));
+                }
                 String[] expectedSplit = line1.split(" ");
                 String[] actualSplit = line2.split(" ");
 
-                Assert.assertEquals(
-                    String.format("Test: %s. Line %d expected to contain %d numbers", testNameSupplier.get(), lineNumber,  expectedSplit.length),
-                    expectedSplit.length,
-                    actualSplit.length);
+                if (lineNumber !=  expectedSplit.length) {
+                    Assert.fail(String.format("Test: %s. Line %d expected to contain %d numbers",
+                            testNameSupplier.get(), lineNumber, expectedSplit.length));
+                }
 
                 for (int i = 0; i < expectedSplit.length; ++i) {
                     double expectedParsed = Double.parseDouble(expectedSplit[i]);
                     double actualParsed = Double.parseDouble(actualSplit[i]);
 
-                    Assert.assertEquals(
-                        String.format("Test: %s. Line %d deviates from expected", testNameSupplier.get(), lineNumber),
-                        expectedParsed,
-                        actualParsed,
-                        1e-8);
+                    if (Math.abs(expectedParsed - actualParsed) > 1e-8) {
+                        Assert.fail(String.format("Test: %s. Line %d deviates from expected",
+                                testNameSupplier.get(), lineNumber));
+                    }
                 }
 
                 lineNumber++;
