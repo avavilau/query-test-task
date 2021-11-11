@@ -22,7 +22,7 @@ public class QueryCalcImpl implements QueryCalc {
         //  computation time, memory usage and resource utilization (in that exact order). You are free to use any lib
         //  from a maven central.
         //
-        // SELECT a, SUM(X * y * z) AS s FROM 
+        // SELECT a, SUM(x * y * z) AS s FROM 
         // t1 LEFT JOIN (SELECT * FROM t2 JOIN t3) AS t
         // ON a < b + c
         // GROUP BY a
