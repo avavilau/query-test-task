@@ -111,38 +111,32 @@ public class QueryCalcImpl implements QueryCalc {
         // In case multiple occurrences, you may assume that group has a row number of the first occurrence.
 
         /*
-        First, I'm going to assume that each table contains n rows. The problem description doesnt say anything about
+        I'm assuming that each table contains n rows. The problem description doesnt say anything about
         this. In the real world, its possible to implement multiple strategies and then apply them depending on the data
         characteristics.
 
         There is a  join on 2 sides of a < b+c. Left side contains n rows while the right side contains n*n rows.
-        There are 2 options of how they can be implemented:
+        I'm using the following approach:
 
-        1. For every element on the right, find all a's such as a<b+c. Accumulate x*y*z in each a. This computation will
-        take O(n*n*n). Sorting t1 by a isn't going to help all that much since we would still need to scan O(n) rows
-        in t1 (a < b+c). Then, we would scan t1 and find top10. So, its O(n^3)
-
-        2. Compute t2 join t3 in ram. (Store only {b+c, y*z}). Sort by b+c, iterate from the top and keep the running
+        1. Compute t2 join t3 in ram. (Store only {b+c, y*z}). Sort by b+c, iterate from the top and keep the running
         sum. Replace b*c with the sum(b*c) for such b,c that b+c > the given b+c
 
-        3. Read t1 and store it in a hashmap with a as a key. For value of a, lookup b+c which are greater than a and
+        2. Read t1 and store it in a hashmap with a as a key. For value of a, lookup b+c which are greater than a and
         sum precomputed xyz. Store these sums in the hashtable along with the row number for the first given value of a
 
-        4.  Find top 10 in the hashtable using a sorted container. Use row number from the original table to break ties.
+        3. Find top 10 in the hashtable using a sorted container. Use row number from the original table to break ties.
 
-        ToDo:
-        - more testing and some benchmarking
+        Since this approach stores the entire outer join in RAM and sort it, the space complexity is O(n*n). The time
+        complexity is O(n*n*log n)
 
         More optimization opportunities:
         I use standard Java containers here to store objects which contain either 2 doubles or a double and an integer.
-        This will incure a pretty significant cost of an object pointers and pointer indirection. Also, this will not
+        This will incur a pretty significant cost of an object pointers and pointer indirection. Also, this will not
         be good for the CPU cash. We should look into using a different language or may be some sort of a native
         memory allocation technique
 
         I'm pretty sure, many operations here could be parallelized. May be by using streams library. It could also
         be done manually.
-
-
          */
 
         // Read t3 into RAM
